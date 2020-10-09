@@ -1,10 +1,15 @@
 package bader.com.chart.acitivities;
 
-import android.app.ProgressDialog;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.util.Log;
+import android.view.MotionEvent;
+import android.widget.Toast;
 
-import com.android.volley.AuthFailureError;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+
 import com.android.volley.Request;
 import com.android.volley.Response;
 import com.android.volley.ServerError;
@@ -14,7 +19,6 @@ import com.github.mikephil.charting.animation.Easing;
 import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.components.Description;
 import com.github.mikephil.charting.components.Legend;
-import com.github.mikephil.charting.components.LimitLine;
 import com.github.mikephil.charting.components.XAxis;
 import com.github.mikephil.charting.components.YAxis;
 import com.github.mikephil.charting.data.Entry;
@@ -29,32 +33,15 @@ import com.github.mikephil.charting.listener.OnChartValueSelectedListener;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
-
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
-import androidx.core.content.ContextCompat;
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
-
-import android.util.Log;
-import android.view.MotionEvent;
-import android.view.View;
-import android.view.WindowManager;
-import android.widget.Toast;
-
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import bader.com.chart.R;
 import bader.com.chart.constants.API;
-import bader.com.chart.data.ADMSIGN;
 import bader.com.chart.data.TempChartEntry;
 import bader.com.chart.data.TempData;
 import bader.com.chart.utils.MyXAxisRenderer;
@@ -66,7 +53,9 @@ public class MainActivity extends AppCompatActivity implements OnChartGestureLis
     LineChart mChart;
     SwipeRefreshLayout swipeRefreshLayout;
     LineDataSet set1;
-
+    XAxis xAxis;
+    YAxis leftAxis;
+    String[] strings;
     Gson gson;
     List<TempChartEntry> tempChartEntries;
 
@@ -75,37 +64,26 @@ public class MainActivity extends AppCompatActivity implements OnChartGestureLis
         super.onCreate(savedInstanceState);
         GsonBuilder gsonBuilder = new GsonBuilder();
         gson = gsonBuilder.create();
-
         initViews();
         getTempDataFromServer();
-        //  dont forget to refresh the drawing
-
-
-
     }
 
     private void initViews() {
+        /*init views
+        * init mChart and init x axis ,yaxis views
+        * add swipe refresh to show loading and to refresh data*/
         setContentView(R.layout.activity_main);
-
-
-        mChart=findViewById(R.id.linechart);
-        swipeRefreshLayout=findViewById(R.id.swiperefresh);
+        mChart = findViewById(R.id.linechart);
+        swipeRefreshLayout = findViewById(R.id.swiperefresh);
         mChart.setOnChartGestureListener(this);
         mChart.setOnChartValueSelectedListener(this);
         mChart.setDrawGridBackground(false);
-
-        // get the legend (only possible after setting data)
-        Legend l = mChart.getLegend();
-
-        // modify the legend ...
-        // l.setPosition(LegendPosition.LEFT_OF_CHART);
-        l.setForm(Legend.LegendForm.LINE);
-
         // no description text
-        Description description=new Description();
+        Description description = new Description();
         description.setText("Temp °C");
         swipeRefreshLayout.post(new Runnable() {
-            @Override public void run() {
+            @Override
+            public void run() {
                 swipeRefreshLayout.setRefreshing(true);
             }
         });
@@ -116,20 +94,18 @@ public class MainActivity extends AppCompatActivity implements OnChartGestureLis
         mChart.setTouchEnabled(true);
         // enable scaling and dragging
         mChart.setDragEnabled(true);
-        YAxis leftAxis = mChart.getAxisLeft();
+        leftAxis = mChart.getAxisLeft();
         float percent = 10;
         leftAxis.setSpaceTop(percent);
         leftAxis.setSpaceBottom(percent);
         leftAxis.removeAllLimitLines(); // reset all limit lines to avoid overlapping lines
-//        leftAxis.enableGridDashedLine(5f, 5f, 0f);
         leftAxis.setDrawZeroLine(false);
 
-        XAxis xAxis = mChart.getXAxis();
+         xAxis = mChart.getXAxis();
         xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
         xAxis.setLabelRotationAngle(-30f);
 //        xAxis.setCenterAxisLabels(true);
         xAxis.setAvoidFirstLastClipping(true);
-
         // limit lines are drawn behind data (and not on top)
         leftAxis.setDrawLimitLinesBehindData(true);
         mChart.getAxisRight().setEnabled(false);
@@ -139,51 +115,52 @@ public class MainActivity extends AppCompatActivity implements OnChartGestureLis
                 getTempDataFromServer();
             }
         });
-//        mChart.setVisibleXRangeMaximum(15); // allow 15 values to be displayed at once on the x-axis, not more
-  // set the left edge of the chart to x-index 10
-//        mChart.fitScreen();
     }
 
-    String [] strings;
-    private ArrayList<Entry> getChartEntries(){
+
+    private ArrayList<Entry> getChartEntries() {
+        /*add entries from tempChartEntries to use it in chart*/
         ArrayList<Entry> entries = new ArrayList<Entry>();
-        for (TempChartEntry temp:
-             tempChartEntries) {
+        for (TempChartEntry temp :
+                tempChartEntries) {
             entries.add(new Entry(temp.getX(), temp.getY()));
 
         }
         return entries;
     }
-    private String[] getXLabels(){
+
+    private String[] getXLabels() {
+        /*add dates to string array*/
         String[] arr = new String[tempChartEntries.size()];
-        for (int i = 0; i <arr.length ; i++) {
-            arr[i]=tempChartEntries.get(i).getDateLabel();
+        for (int i = 0; i < arr.length; i++) {
+            arr[i] = tempChartEntries.get(i).getDateLabel();
         }
         return arr;
     }
 
     private void addChartDataEntries() {
-        mChart.animateX(500, Easing.EaseInOutQuart);
+        /*
+         * Create date set1 LineDataSet add (x,y)
+         * Customize line set ui (font color,size,circle,draw values
+         * Add x label (Dates) via strings array
+         * set setVisibleXRangeMaximum to 6 and move view to last 6 entries*/
 
+        mChart.animateX(500, Easing.EaseInOutQuart);
         ArrayList<Entry> entries = getChartEntries();
         // create a dataset and give it a type
         set1 = new LineDataSet(entries, "Temp °C");
         set1.setFillAlpha(110);
-        set1.setColor(ContextCompat.getColor(this,R.color.blue));
-        set1.setCircleColor(ContextCompat.getColor(this,R.color.blue));
+        set1.setColor(ContextCompat.getColor(this, R.color.blue));
+        set1.setCircleColor(ContextCompat.getColor(this, R.color.blue));
         set1.setCircleRadius(3f);
         set1.setDrawCircleHole(false);
         set1.setValueTextSize(9f);
         set1.setDrawFilled(false);
         set1.setDrawValues(true);
-       set1.setValueTextColor(ContextCompat.getColor(this,R.color.blue));
-        strings= getXLabels();
-        mChart.getXAxis().setValueFormatter(new IndexAxisValueFormatter(strings));
-//        mChart.getXAxis().setYOffset(30);todo set this value if u want with -30 degree and remove    strings.add(""); MyXAxisRenderer
-        mChart.setXAxisRenderer(new MyXAxisRenderer(mChart.getViewPortHandler(),mChart.getXAxis(),mChart.getTransformer(YAxis.AxisDependency.LEFT), 20));
-        mChart.getXAxis().setLabelCount(4,true);
-        mChart.setPinchZoom(false);
-
+        set1.setValueTextColor(ContextCompat.getColor(this, R.color.blue));
+        strings = getXLabels();
+        xAxis.setValueFormatter(new IndexAxisValueFormatter(strings));
+        mChart.setXAxisRenderer(new MyXAxisRenderer(mChart.getViewPortHandler(), xAxis, mChart.getTransformer(YAxis.AxisDependency.LEFT), 20));
         Legend legend = mChart.getLegend();
         legend.setEnabled(false);
         ArrayList<ILineDataSet> dataSets = new ArrayList<ILineDataSet>();
@@ -192,14 +169,23 @@ public class MainActivity extends AppCompatActivity implements OnChartGestureLis
         LineData data = new LineData(set1);
         // set data
         mChart.setData(data);
-        if (entries.size()>4){
-            mChart.moveViewToX(entries.size()-4);
+        mChart.setVisibleXRangeMaximum(6);
+        mChart.setScrollContainer(true);
+        mChart.setHorizontalScrollBarEnabled(true);
+        mChart.setScaleXEnabled(true);
+//        mChart.setHorizontalScrollbarThumbDrawable();
+//        mChart.moveViewToX(2);
+        if (entries.size() > 6) {
+            mChart.setHorizontalScrollBarEnabled(true);
+            mChart.moveViewToX(entries.size() - 6);
         }
         mChart.invalidate();
     }
+
     public void getTempDataFromServer() {
         swipeRefreshLayout.post(new Runnable() {
-            @Override public void run() {
+            @Override
+            public void run() {
                 swipeRefreshLayout.setRefreshing(true);
             }
         });
@@ -209,11 +195,8 @@ public class MainActivity extends AppCompatActivity implements OnChartGestureLis
                 new Response.Listener<String>() {
                     @Override
                     public void onResponse(String response) {
-                        JSONObject responseJson;
                         try {
-                             responseJson = new JSONObject(response);
-                            //todo change cond and change in/out based on server request and no need for shared pref to save things here
-                            TempData tempData =gson.fromJson(response, TempData.class);
+                            TempData tempData = gson.fromJson(response, TempData.class);
                             tempChartEntries = tempData.getTempChartEntries();
                             addChartDataEntries();
                             mChart.setNoDataText("Error with data");
@@ -221,7 +204,7 @@ public class MainActivity extends AppCompatActivity implements OnChartGestureLis
                             swipeRefreshLayout.setRefreshing(false);
 
                         } catch (Exception e) {
-                            Log.e("FormatError",response);
+                            Log.e("FormatError", response);
                             mChart.setNoDataText("Error with data");
                             mChart.setNoDataTextColor(Color.RED);
                             e.printStackTrace();
@@ -234,13 +217,13 @@ public class MainActivity extends AppCompatActivity implements OnChartGestureLis
                     @Override
                     public void onErrorResponse(VolleyError error) {
                         swipeRefreshLayout.setRefreshing(false);
-                        String responseBody="";
+                        String responseBody = "";
                         if (error instanceof ServerError) {
 
                             try {
                                 responseBody = new String(error.networkResponse.data, "utf-8");
                                 JSONObject jsonObject = new JSONObject(responseBody);
-                                Log.e("ServerError",jsonObject.toString());
+                                Log.e("ServerError", jsonObject.toString());
                                 mChart.setNoDataText("Server Error");
                                 mChart.setNoDataTextColor(Color.RED);
 
@@ -248,10 +231,11 @@ public class MainActivity extends AppCompatActivity implements OnChartGestureLis
                                 e.printStackTrace();
                             }
                         } else {
-                            Log.e("ServerError",error.getMessage());
+                            Log.e("ServerError", error.getMessage());
                             mChart.setNoDataText(getString(R.string.NetworkError));
                             mChart.setNoDataTextColor(Color.RED);
-                            Toast.makeText(getApplicationContext(),R.string.NetworkError,Toast.LENGTH_LONG).show(); }
+                            Toast.makeText(getApplicationContext(), R.string.NetworkError, Toast.LENGTH_LONG).show();
+                        }
                     }
                 });
 
@@ -270,7 +254,7 @@ public class MainActivity extends AppCompatActivity implements OnChartGestureLis
         Log.i("Gesture", "END, lastGesture: " + lastPerformedGesture);
 
         // un-highlight values after the gesture is finished and no single-tap
-        if(lastPerformedGesture != ChartTouchListener.ChartGesture.SINGLE_TAP)
+        if (lastPerformedGesture != ChartTouchListener.ChartGesture.SINGLE_TAP)
             mChart.highlightValues(null); // or highlightTouch(null) for callback to onNothingSelected(...)
     }
 
@@ -305,10 +289,9 @@ public class MainActivity extends AppCompatActivity implements OnChartGestureLis
     }
 
 
-
     @Override
     public void onValueSelected(Entry e, Highlight h) {
-        Toast.makeText(this, strings[(int)e.getX()].replace("\n"," ")+ String.format("\nTemp %.1f °C",e.getY() ), Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, strings[(int) e.getX()].replace("\n", " ") + String.format("\nTemp %.2f °C", e.getY()), Toast.LENGTH_SHORT).show();
 
         Log.i("Entry selected", e.toString());
 //        Log.i("LOWHIGH", "low: " + mChart.getLowestVisibleXIndex() + ", high: " + mChart.getHighestVisibleXIndex());

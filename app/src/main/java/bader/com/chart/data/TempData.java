@@ -21,6 +21,7 @@ public class TempData {
     }
 
     public List<TempChartEntry> getTempChartEntries() {
+        /*util to sort by date and return list of entries*/
         Collections.sort(mADMSIGNS);
         List<TempChartEntry> entries = new ArrayList<TempChartEntry>();
         int x = 0;

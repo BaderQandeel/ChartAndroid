@@ -206,6 +206,7 @@ public class ADMSIGN implements Comparable<ADMSIGN>{
     }
 
     public Date getDate() {
+        /*util to get date from mVADMDATE to use it in compare*/
         Date date=null;
         try {
             String [] dateParts = this.mVADMDATE.split("/");
@@ -222,6 +223,7 @@ public class ADMSIGN implements Comparable<ADMSIGN>{
         return date;
     }
     public String getDateLabel(){
+        /*util to get date label to show it in x-axis*/
         String [] dateParts = this.mVADMDATE.split("/");
         String day = dateParts[0];
         String month = dateParts[1];
