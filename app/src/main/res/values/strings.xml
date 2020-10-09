@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Temp °C</string>
+    <string name="please_wait">Please wait</string>
+    <string name="NetworkError">Can\'t connect to ineternet .. please check your internet connection</string>
+</resources>
