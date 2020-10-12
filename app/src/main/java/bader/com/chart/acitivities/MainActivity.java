@@ -4,6 +4,7 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.MotionEvent;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -52,12 +53,15 @@ public class MainActivity extends AppCompatActivity implements OnChartGestureLis
         OnChartValueSelectedListener {
     LineChart mChart;
     SwipeRefreshLayout swipeRefreshLayout;
+    TextView tv_year;
     LineDataSet set1;
     XAxis xAxis;
     YAxis leftAxis;
     String[] strings;
     Gson gson;
     List<TempChartEntry> tempChartEntries;
+    int visibleXvaluesCount;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -75,6 +79,7 @@ public class MainActivity extends AppCompatActivity implements OnChartGestureLis
         setContentView(R.layout.activity_main);
         mChart = findViewById(R.id.linechart);
         swipeRefreshLayout = findViewById(R.id.swiperefresh);
+        tv_year=findViewById(R.id.tv_year);
         mChart.setOnChartGestureListener(this);
         mChart.setOnChartValueSelectedListener(this);
         mChart.setDrawGridBackground(false);
@@ -103,9 +108,11 @@ public class MainActivity extends AppCompatActivity implements OnChartGestureLis
 
          xAxis = mChart.getXAxis();
         xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
-        xAxis.setLabelRotationAngle(-30f);
+//        xAxis.setLabelRotationAngle(-30f);
 //        xAxis.setCenterAxisLabels(true);
         xAxis.setAvoidFirstLastClipping(true);
+        mChart.setExtraOffsets(10, 10, 10, 20);
+
         // limit lines are drawn behind data (and not on top)
         leftAxis.setDrawLimitLinesBehindData(true);
         mChart.getAxisRight().setEnabled(false);
@@ -152,6 +159,9 @@ public class MainActivity extends AppCompatActivity implements OnChartGestureLis
         set1.setFillAlpha(110);
         set1.setColor(ContextCompat.getColor(this, R.color.blue));
         set1.setCircleColor(ContextCompat.getColor(this, R.color.blue));
+
+        xAxis.setDrawLabels(true);
+        mChart.setPinchZoom(false);
         set1.setCircleRadius(3f);
         set1.setDrawCircleHole(false);
         set1.setValueTextSize(9f);
@@ -160,26 +170,34 @@ public class MainActivity extends AppCompatActivity implements OnChartGestureLis
         set1.setValueTextColor(ContextCompat.getColor(this, R.color.blue));
         strings = getXLabels();
         xAxis.setValueFormatter(new IndexAxisValueFormatter(strings));
+        xAxis.setTextSize(9f);
         mChart.setXAxisRenderer(new MyXAxisRenderer(mChart.getViewPortHandler(), xAxis, mChart.getTransformer(YAxis.AxisDependency.LEFT), 20));
         Legend legend = mChart.getLegend();
         legend.setEnabled(false);
-        ArrayList<ILineDataSet> dataSets = new ArrayList<ILineDataSet>();
-        dataSets.add(set1); // add the datasets
+//        ArrayList<ILineDataSet> dataSets = new ArrayList<ILineDataSet>();
+//        dataSets.add(set1); // add the datasets
         // create a data object with the datasets
         LineData data = new LineData(set1);
         // set data
         mChart.setData(data);
-        mChart.setVisibleXRangeMaximum(6);
+        mChart.setVisibleXRangeMaximum(4);
+//        xAxis.setAxisMinimum(5f);
+//        mChart.setMaxVisibleValueCount(4);
+        visibleXvaluesCount =(int)( mChart.getHighestVisibleX()-mChart.getLowestVisibleX()+1);
+        xAxis.setLabelCount(visibleXvaluesCount,true);
         mChart.setScrollContainer(true);
         mChart.setHorizontalScrollBarEnabled(true);
-        mChart.setScaleXEnabled(true);
+        mChart.setScaleXEnabled(false);
+        mChart.setScaleYEnabled(false);
 //        mChart.setHorizontalScrollbarThumbDrawable();
 //        mChart.moveViewToX(2);
-        if (entries.size() > 6) {
-            mChart.setHorizontalScrollBarEnabled(true);
-            mChart.moveViewToX(entries.size() - 6);
+        if (entries.size() > 4) {
+
+            mChart.moveViewToX(entries.size() - 4);
         }
+
         mChart.invalidate();
+        Log.e("VisibleX",mChart.getVisibleXRange()+"");
     }
 
     public void getTempDataFromServer() {
@@ -199,6 +217,7 @@ public class MainActivity extends AppCompatActivity implements OnChartGestureLis
                             TempData tempData = gson.fromJson(response, TempData.class);
                             tempChartEntries = tempData.getTempChartEntries();
                             addChartDataEntries();
+                            tv_year.setText(tempData.getYear());
                             mChart.setNoDataText("Error with data");
                             mChart.setNoDataTextColor(Color.RED);
                             swipeRefreshLayout.setRefreshing(false);
@@ -232,6 +251,7 @@ public class MainActivity extends AppCompatActivity implements OnChartGestureLis
                             }
                         } else {
                             Log.e("ServerError", error.getMessage());
+                            swipeRefreshLayout.setRefreshing(false);
                             mChart.setNoDataText(getString(R.string.NetworkError));
                             mChart.setNoDataTextColor(Color.RED);
                             Toast.makeText(getApplicationContext(), R.string.NetworkError, Toast.LENGTH_LONG).show();
@@ -247,13 +267,24 @@ public class MainActivity extends AppCompatActivity implements OnChartGestureLis
     @Override
     public void onChartGestureStart(MotionEvent me, ChartTouchListener.ChartGesture lastPerformedGesture) {
         Log.i("Gesture", "START, x: " + me.getX() + ", y: " + me.getY());
+        int visibleXvaluesCount =(int)( mChart.getHighestVisibleX()-mChart.getLowestVisibleX()+1);
+
+        xAxis.setLabelCount((int)mChart.getVisibleXRange());
     }
 
     @Override
     public void onChartGestureEnd(MotionEvent me, ChartTouchListener.ChartGesture lastPerformedGesture) {
         Log.i("Gesture", "END, lastGesture: " + lastPerformedGesture);
+        Log.i("Gesture", "END, getVisibleXRange: " + mChart.getVisibleXRange());
+        Log.i("Gesture", "END, getHXRange: " + mChart.getHighestVisibleX());
 
         // un-highlight values after the gesture is finished and no single-tap
+        if((int)mChart.getHighestVisibleX()==tempChartEntries.size()-1){
+            xAxis.setLabelCount(visibleXvaluesCount,true);
+        }else{
+            xAxis.setLabelCount((int)mChart.getVisibleXRange());
+        }
+
         if (lastPerformedGesture != ChartTouchListener.ChartGesture.SINGLE_TAP)
             mChart.highlightValues(null); // or highlightTouch(null) for callback to onNothingSelected(...)
     }

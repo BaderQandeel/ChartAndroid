@@ -227,9 +227,8 @@ public class ADMSIGN implements Comparable<ADMSIGN>{
         String [] dateParts = this.mVADMDATE.split("/");
         String day = dateParts[0];
         String month = dateParts[1];
-        String year = dateParts[2].substring(0,4);
-        String hours_minutes = dateParts[2].substring(dateParts[2].length() - 5).trim();
-        String strdate = day+"/"+month+"/"+year+"\n"+hours_minutes;
+        String hours_minutes = dateParts[2].substring(dateParts[2].length() - 5).trim();//02:22
+        String strdate = day+"/"+month+"\n"+hours_minutes;
         return strdate;
     }
 }

@@ -33,5 +33,11 @@ public class TempData {
         }
         return entries;
     }
+    public String getYear(){
+        Collections.sort(mADMSIGNS);
+        String [] dateParts = mADMSIGNS.get(mADMSIGNS.size()-1).getVADMDATE().split("/");
+        String year = dateParts[2].substring(0,4);
+        return year;
+    }
 
 }

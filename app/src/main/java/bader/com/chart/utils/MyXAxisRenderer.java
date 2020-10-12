@@ -51,7 +51,6 @@ public class MyXAxisRenderer extends XAxisRenderer {
     private List<String> splitByNumber(String s, int size) {
         List<String> strings = new ArrayList<>();
         strings.add(s.substring(0, s.indexOf('\n')));
-        strings.add("");
         strings.add(s.substring(s.indexOf('\n'),s.length()));
 
         return strings;
